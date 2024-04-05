@@ -14,6 +14,7 @@ HttpClient client = HttpClient(wifi, TargetSERVER);
 
 void setup() {
   TimerCAM.begin(true); // enable RTC power management
+//  TimerCAM.Power.timerSleep(3600);
   // TimerCAM.begin(true) results in camera init fail
   // https://github.com/m5stack/TimerCam-arduino/issues/16
   // change "Wire1" -> "Wire" at begin() in RTC8563_Class.cpp, located at .pio/libdeps/m5stack-timer-cam/Timer-CAM/src/utility/
@@ -30,29 +31,31 @@ void setup() {
   TimerCAM.Camera.sensor->set_vflip(TimerCAM.Camera.sensor, 1);
   TimerCAM.Camera.sensor->set_hmirror(TimerCAM.Camera.sensor, 0);
 
+  uint8_t res = TimerCAM.Camera.get();
+
   WiFi.disconnect(true);  //disconnect form wifi to set new wifi connection
   WiFi.mode(WIFI_STA); //init wifi mode
-//  printf("Connecting to %s\n", ssid);
+  printf("Connecting to %s\n", ssid);
   WiFi.begin(ssid, WPA2_AUTH_PEAP, EAP_IDENTITY, EAP_USERNAME, EAP_PASSWORD);
   WiFi.setSleep(false);
   uint8_t f = 0;
   while (WiFi.status() != WL_CONNECTED) {
-//    if (f == 0) TimerCAM.Power.setLed(100); else TimerCAM.Power.setLed(0);
-//    f = 1 - f;
-    delay(500);
+//    if (f == 0) TimerCAM.Power.setLed(100); else TimerCAM.Power.setLed(0); f = 1 - f;
+    delay(100);
   }
-  TimerCAM.Power.setLed(0);
+//  TimerCAM.Power.setLed(0);
+//  printf("Connected to %s, IP addr=%s\n", ssid, WiFi.localIP().toString().c_str());
 
-  printf("Connected to %s, IP addr=%s\n", ssid, WiFi.localIP().toString().c_str());
-
-  if (TimerCAM.Camera.get()) {
-    printf("making POST request\n");
+  res = TimerCAM.Camera.get();
+  if (res){
+//  if (TimerCAM.Camera.get()) {
+//    printf("making POST request\n");
     String contentType = "image/jpeg";
-    client.post("/akita/putimage.php", contentType.c_str(), TimerCAM.Camera.fb->len, TimerCAM.Camera.fb->buf);
+    client.post("/hoge/hoge.php", contentType.c_str(), TimerCAM.Camera.fb->len, TimerCAM.Camera.fb->buf);
     // read the status code and body of the response
-    int statusCode  = client.responseStatusCode();
-    String response = client.responseBody();
-    printf("Status code: %d, Response: %s\n", statusCode, response.c_str());
+//    int statusCode  = client.responseStatusCode();
+//    String response = client.responseBody();
+//    printf("Status code: %d, Response: %s\n", statusCode, response.c_str());
     TimerCAM.Camera.free();
   }
   else{
@@ -62,8 +65,9 @@ void setup() {
     }
   }
   TimerCAM.Power.setLed(10); delay(100); TimerCAM.Power.setLed(0);
-  printf("going to sleep for 60*60 sec\n");
-  TimerCAM.Power.timerSleep(3600);
+//  printf("going to sleep for 60*60 sec\n");
+//  TimerCAM.Power.timerSleep(10);
+  TimerCAM.Power.timerSleep(24*3600);
 }
 
 void loop() {
