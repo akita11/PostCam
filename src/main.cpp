@@ -10,7 +10,7 @@
 #define EAP_USERNAME "userid"
 #define EAP_PASSWORD "password"
 const char* ssid = "ssid";
-#define POST_URL "/akita/putimage.php"
+#define POST_URL "/POST_URL"
 
 #define WIFI_TRIAL 60  // WiFi接続の最大試行回数
 
