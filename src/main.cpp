@@ -7,21 +7,25 @@
 #include <WiFiUdp.h>
 
 #define EAP_IDENTITY ""
-#define EAP_USERNAME "userid"
-#define EAP_PASSWORD "password"
-const char* ssid = "ssid";
-#define POST_URL "/POST_URL"
+#define EAP_USERNAME "USER"
+#define EAP_PASSWORD "PWD"
+const char* ssid = "SSID";
+//const char* ssid = "SSID_WPA2";
+//const wifi_pwd = "WIFI_PWD"
+#define POST_URL "/URL/put.php"
 
-#define WIFI_TRIAL 60  // WiFi接続の最大試行回数
+#define WIFI_TRIAL 120  // WiFi接続の最大試行回数
 
-#define TargetSERVER "ifdl.jp"
+#define TargetSERVER "TARGET_SERVER"
+
+#define DEBUG
 
 WiFiClient wifi;
 HttpClient client = HttpClient(wifi, TargetSERVER);
 
 void showError(int T, int N){
   for (uint8_t i = 0; i < N; i++){
-    TimerCAM.Power.setLed(100); delay(T); TimerCAM.Power.setLed(0); delay(T);
+    TimerCAM.Power.setLed(50); delay(T); TimerCAM.Power.setLed(0); delay(T);
   }
 }
 
@@ -29,23 +33,31 @@ bool connectToWiFi() {
   WiFi.disconnect(true);
   WiFi.mode(WIFI_STA);
   printf("Connecting to %s...", ssid);
+#ifdef EAP_IDENTITY
   WiFi.begin(ssid, WPA2_AUTH_PEAP, EAP_IDENTITY, EAP_USERNAME, EAP_PASSWORD);
+#else
+  WiFi.begin(ssid, "hogeupip5");
+#endif
   WiFi.setSleep(false);
   uint8_t f = 0;
   uint8_t trial = 0;
   while (WiFi.status() != WL_CONNECTED && trial < WIFI_TRIAL) {
     delay(500);
-    if (f == 0) TimerCAM.Power.setLed(50);
+    if (f == 0) TimerCAM.Power.setLed(10);
     else TimerCAM.Power.setLed(0);
     f = 1 - f;
     trial++;
   }
   TimerCAM.Power.setLed(0);
   if (WiFi.status() == WL_CONNECTED) {
+#ifdef DEBUG
     printf("connected\n");
+#endif
     return true;
   } else {
+#ifdef DEBUG
     printf("connection failed after %d trials\n", WIFI_TRIAL);
+#endif
 		showError(100, 10);
     return false;
   }
@@ -75,7 +87,9 @@ void setup() {
   rtc_date_t dateStruct;
   TimerCAM.Rtc.getTime(&timeStruct);
   TimerCAM.Rtc.getDate(&dateStruct);
+#ifdef DEBUG
   printf("Current: %04d/%02d/%02d %02d:%02d:%02d\n", dateStruct.year, dateStruct.month, dateStruct.date, timeStruct.hours, timeStruct.minutes, timeStruct.seconds);
+#endif
 
   // RTCの年が2024年以前の場合のみNTP同期を実行
   if (dateStruct.year < 2024) {
@@ -113,19 +127,41 @@ void setup() {
   res = TimerCAM.Camera.get();
   if (res){
 	  if (connectToWiFi() == true){
+#ifdef DEBUG
 			printf("posting image...");
+#endif
  	  	String contentType = "image/jpeg";
- 	  	client.post(POST_URL, contentType.c_str(), TimerCAM.Camera.fb->len, TimerCAM.Camera.fb->buf);
-		}
+      // ヘッダーを追加
+      client.beginRequest();
+      client.post(POST_URL);
+      client.sendHeader("Content-Type", contentType);
+      client.sendHeader("Content-Length", String(TimerCAM.Camera.fb->len));
+      client.beginBody();
+      // 画像データを送信
+  	  client.write((const uint8_t*)TimerCAM.Camera.fb->buf, TimerCAM.Camera.fb->len);
+      client.endRequest();
+      
+      // レスポンスを確認
+      int statusCode = client.responseStatusCode();
+      String response = client.responseBody();
+//      printf("HTTP Status: %d\n", statusCode);
+//      printf("Response: %s\n", response.c_str());
+  		}
 		else{
+#ifdef DEBUG
 			printf("failed to connect WiFi\n");
+#endif
 		}
     TimerCAM.Camera.free();
+#ifdef DEBUG
 		printf("done\n");
+#endif
   }
   else{
     // image capture error
+#ifdef DEBUG
 		printf("image capture error\n");
+#endif
 		showError(50, 50);
   }
 
@@ -149,7 +185,9 @@ void setup() {
     alarmTime.hours = 10;
   } else if (currentTime.hours < 16) {
     // 現在時刻が10時以降16時前なら16時に設定
+#ifdef DEBUG
     printf("Next alarm: 16:00\n");
+#endif
     alarmTime.hours = 16;
 	}
   alarmTime.minutes = 0;
